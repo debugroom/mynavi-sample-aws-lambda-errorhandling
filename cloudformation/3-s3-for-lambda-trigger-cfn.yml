@@ -1,0 +1,133 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Sample CloudFormation template with YAML - S3 Bucket Definition - Depends On 2-lambda-cfn.yml
+
+Parameters:
+  BucketNameForBusinessError:
+    Description: Target VPC Stack Name
+    Type: String
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]*$
+    Default: debugroom-mynavi-sample-lambda-errorhandling-for-business-error
+  BucketNameForSystemError:
+    Description: Target VPC Stack Name
+    Type: String
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]*$
+    Default: debugroom-mynavi-sample-lambda-errorhandling-for-system-error
+
+Resources:
+  BusinessErrorS3Bucket:
+    Type: AWS::S3::Bucket
+    DependsOn: AsycExecutionBusinessErrorLambdaInvokePermission
+    Properties:
+      BucketName: !Ref BucketNameForBusinessError
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function:
+              Fn::ImportValue: mynavi-sample-lambda-errorhandling-async-execute-business-error-function-arn
+
+  AsycExecutionBusinessErrorLambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Fn::ImportValue: mynavi-sample-lambda-errorhandling-async-execute-business-error-function-name
+      Principal: s3.amazonaws.com
+      Action: lambda:InvokeFunction
+      SourceArn: !Join
+        - ""
+        - - "arn:aws:s3:::"
+          - !Ref BucketNameForBusinessError
+
+  SystemErrorS3Bucket:
+    Type: AWS::S3::Bucket
+    DependsOn: AsycExecutionSystemErrorLambdaInvokePermission
+    Properties:
+      BucketName: !Ref BucketNameForSystemError
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function:
+              Fn::ImportValue: mynavi-sample-lambda-errorhandling-async-execute-system-error-function-arn
+
+  AsycExecutionSystemErrorLambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Fn::ImportValue: mynavi-sample-lambda-errorhandling-async-execute-system-error-function-name
+      Principal: s3.amazonaws.com
+      Action: lambda:InvokeFunction
+      SourceArn: !Join
+        - ""
+        - - "arn:aws:s3:::"
+          - !Ref BucketNameForSystemError
+
+  S3AccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: mynavi-sample-lambda-errorhandling-S3AccessPolicy
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action:
+              - "s3:Get*"
+              - "s3:List*"
+            Resource: !Join
+              - ""
+              - - "arn:aws:s3:::"
+                - !Ref BucketNameForBusinessError
+                - "/*"
+          - Effect: Allow
+            Action:
+              - "s3:Get*"
+              - "s3:List*"
+            Resource: !Join
+              - ""
+              - - "arn:aws:s3:::"
+                - !Ref BucketNameForSystemError
+                - "/*"
+      Roles:
+        - Fn::ImportValue: mynavi-sample-lambda-errorhandling-lambda-role
+
+Outputs:
+  BusinessErrorS3Bucket:
+    Description: Lambda S3 bucket name for business error.
+    Value: !Ref BusinessErrorS3Bucket
+    Export:
+      Name: mynavi-sample-lambda-errorhandling-business-error-s3-bucket
+
+  BusinessErrorS3BucketArn:
+    Description: S3 for Lambda bucket arn for business error.
+    Value: !GetAtt BusinessErrorS3Bucket.Arn
+    Export:
+      Name: mynavi-sample-lambda-errorhandling-business-error-s3-bucket-arn
+
+  SystemErrorS3Bucket:
+    Description: Lambda S3 bucket name for system error.
+    Value: !Ref SystemErrorS3Bucket
+    Export:
+      Name: mynavi-sample-lambda-errorhandling-system-error-s3-bucket
+
+  SystemErrorS3BucketArn:
+    Description: S3 for Lambda bucket arn for system error.
+    Value: !GetAtt SystemErrorS3Bucket.Arn
+    Export:
+      Name: mynavi-sample-lambda-errorhandling-system-error-s3-bucket-arn
+
+
+

@@ -1,0 +1,32 @@
+cloud:
+  aws:
+    credentials:
+      profileName:
+      instanceProfile: false
+    stack:
+      auto: false
+    region:
+      auto: false
+      static: ap-northeast-1
+spring:
+  main:
+    web-application-type: none
+  cloud:
+    function:
+      scan:
+        packages: org.debugroom.mynavi.sample.aws.lambda.errorhandling.app.function
+logging:
+  level:
+    com:
+      amazonaws:
+        util:
+          EC2MetadataUtils : error
+service:
+  systems-manager-parameter-store:
+    mattermost:
+      in-comming-webhook: sample-aws-lambda-errorhandling-mattermost-webhook-url
+  CloudFormation:
+    sqs:
+      endpoint: mynavi-sample-lambda-errorhandling-sqs-service-endpoint
+      region: mynavi-sample-lambda-errorhandling-sqs-service-region
+      queue-name: mynavi-sample-lambda-errorhandling-sqs-error-queue-name

@@ -1,0 +1,173 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: S3 Bucket for Lambda function template with YAML - API Gateway Definition depends on 2-lambda-cfn.yml
+
+Resources:
+  ApiGatewayRestApi:
+    Type: "AWS::ApiGateway::RestApi"
+    Properties:
+      Name: "mynavi-sample-lambda-errorhandling-rest-api"
+      Description: "Mynavi sample sync execute function API"
+
+  ApiGatewayDeployment:
+    Type: "AWS::ApiGateway::Deployment"
+    DependsOn:
+     - ApiGatewayBusinessExceptionMethod
+     - ApiGatewaySystemExceptionMethod
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayRestApi
+
+  ApiGatewayStage:
+    Type: "AWS::ApiGateway::Stage"
+    Properties:
+      StageName: "dev"
+      Description: "dev stage"
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      #      Variables:
+      #        foo: "bar"
+      DeploymentId:
+        Ref: ApiGatewayDeployment
+
+  ApiGatewayModel:
+    Type: "AWS::ApiGateway::Model"
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      ContentType: "application/json"
+      Name: SampleSchema
+      Schema:
+        "$schema": "http://json-schema.org/draft-04/schema#"
+        title: SampleResource
+        type: object
+        properties:
+          message:
+            type: string
+
+  ApiGatewayBusinessExceptionResource:
+    Type: "AWS::ApiGateway::Resource"
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      ParentId:
+        Fn::GetAtt:
+          - ApiGatewayRestApi
+          - RootResourceId
+      PathPart: "business-exception-sample-resource"
+
+  ApiGatewaySystemExceptionResource:
+    Type: "AWS::ApiGateway::Resource"
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      ParentId:
+        Fn::GetAtt:
+          - ApiGatewayRestApi
+          - RootResourceId
+      PathPart: "system-exception-sample-resource"
+
+  ApiGatewayBusinessExceptionMethod:
+    Type: "AWS::ApiGateway::Method"
+    DependsOn: ApiGatewayModel
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      ResourceId:
+        Ref: ApiGatewayBusinessExceptionResource
+      HttpMethod: "GET"
+      AuthorizationType: "NONE"
+      Integration:
+        Type: "AWS_PROXY"
+        Uri:
+          Fn::Join:
+            - ""
+            - - "arn:aws:apigateway"
+              - ":"
+              - Ref: AWS::Region
+              - ":"
+              - "lambda:path/2015-03-31/functions/"
+              - Fn::ImportValue: mynavi-sample-lambda-errorhandling-sync-execute-business-error-function-arn
+              - "/invocations"
+        IntegrationHttpMethod: "POST"
+        IntegrationResponses:
+          - StatusCode: 400
+            SelectionPattern: 400
+          - StatusCode: 200
+        PassthroughBehavior: WHEN_NO_MATCH
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: SampleSchema
+        - StatusCode: 400
+          ResponseModels:
+            application/json: Error
+
+  ApiGatewaySystemExceptionMethod:
+    Type: "AWS::ApiGateway::Method"
+    DependsOn: ApiGatewayModel
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      ResourceId:
+        Ref: ApiGatewaySystemExceptionResource
+      HttpMethod: "GET"
+      AuthorizationType: "NONE"
+      Integration:
+        Type: "AWS_PROXY"
+        Uri:
+          Fn::Join:
+            - ""
+            - - "arn:aws:apigateway"
+              - ":"
+              - Ref: AWS::Region
+              - ":"
+              - "lambda:path/2015-03-31/functions/"
+              - Fn::ImportValue: mynavi-sample-lambda-errorhandling-sync-execute-system-error-function-arn
+              - "/invocations"
+        IntegrationHttpMethod: "POST"
+#        IntegrationResponses:
+#          - StatusCode: 400
+#            SelectionPattern: 400
+#          - StatusCode: 200
+        PassthroughBehavior: WHEN_NO_MATCH
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: SampleSchema
+        - StatusCode: 400
+          ResponseModels:
+            application/json: Error
+
+  ApiGatewayUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      ApiStages:
+        - ApiId:
+            Ref: ApiGatewayRestApi
+          Stage:
+            Ref: ApiGatewayStage
+      Quota:
+        Limit: 100
+        Period: DAY
+      Throttle:
+        BurstLimit: 10
+        RateLimit: 2
+      UsagePlanName: "SampleUsagePlan"
+
+  BusinessErrorLambdaPermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      FunctionName:
+        Fn::ImportValue: mynavi-sample-lambda-errorhandling-sync-execute-business-error-function-name
+      Action: "lambda:InvokeFunction"
+      Principal: "apigateway.amazonaws.com"
+
+
+  SystemErrorLambdaPermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      FunctionName:
+        Fn::ImportValue: mynavi-sample-lambda-errorhandling-sync-execute-system-error-function-name
+      Action: "lambda:InvokeFunction"
+      Principal: "apigateway.amazonaws.com"

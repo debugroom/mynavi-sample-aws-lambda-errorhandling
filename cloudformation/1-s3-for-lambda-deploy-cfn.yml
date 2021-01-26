@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: S3 Bucket for Lambda function template with YAML - S3 Bucket Definition
+
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: debugroom-mynavi-sample-lambda-errorhandling-for-deploy
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+
+Outputs:
+  S3Bucket:
+    Description: Lambda deploy S3 bucket name
+    Value: !Ref S3Bucket
+    Export:
+      Name: debugroom-mynavi-sample-lambda-errorhandling-deploy-s3-bucket
+
+  S3BucketArn:
+    Description: Deploy S3 for Lambda bucket arn
+    Value: !GetAtt S3Bucket.Arn
+    Export:
+      Name: debugroom-mynavi-sample-lambda-errorhandling-deploy-s3-bucket-arn

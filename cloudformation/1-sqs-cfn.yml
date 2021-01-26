@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Sample CloudFormation template with YAML - SQS Definition
+
+Resources:
+  SQSErrorQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: mynavi-sample-lambda-errorhandling-error-queue
+      VisibilityTimeout: 30
+      DelaySeconds: 5
+      MaximumMessageSize: 26144
+      MessageRetentionPeriod: 345600
+      ReceiveMessageWaitTimeSeconds: 0
+
+Outputs:
+  SQSServiceEndpoint:
+    Description: SQS service endipoint
+    Value: !Sub https://sqs.${AWS::Region}.amazonaws.com
+    Export:
+      Name: mynavi-sample-lambda-errorhandling-sqs-service-endpoint
+
+  SQSServiceRegion:
+    Description: SQS service region
+    Value: !Sub ${AWS::Region}
+    Export:
+      Name: mynavi-sample-lambda-errorhandling-sqs-service-region
+
+  SQSSampleQueue:
+    Description: SQS sample error queue name
+    Value: !Ref SQSErrorQueue
+    Export:
+      Name: mynavi-sample-lambda-errorhandling-sqs-error-queue-name

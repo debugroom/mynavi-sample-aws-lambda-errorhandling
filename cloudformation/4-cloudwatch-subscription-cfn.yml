@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Lambda for notify error function template with YAML - Depends On 4-cloudwatch-subscritipn-cfn.yml.
+
+Resources:
+  CloudWatchLogsSyncExecuteSystemErrorSubscription:
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      LogGroupName: !Ref LogsGroupSyncExecuteSystemError
+      FilterPattern: "Exception"
+      DestinationArn:
+        Fn::ImportValue: mynavi-sample-lambda-errorhandling-notify-system-error-function-arn
+
+  LogsGroupSyncExecuteSystemError:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Join:
+          - ""
+          - - "/aws/lambda/"
+            - Fn::ImportValue: mynavi-sample-lambda-errorhandling-sync-execute-system-error-function-name
+
+  NotifyErrorLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Fn::ImportValue: mynavi-sample-lambda-errorhandling-notify-system-error-function-name
+      Action: lambda:InvokeFunction
+      Principal: !Join [ ".", [ "logs", !Ref "AWS::Region", "amazonaws.com" ] ]
+      SourceAccount: !Ref AWS::AccountId
